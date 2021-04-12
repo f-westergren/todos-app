@@ -1,107 +1,27 @@
 require("dotenv").config();
-const { App } = require("@slack/bolt");
+const express = require('express')
+const app = express();
+app.use(express.json());
 
-const app = new App({
-  token: process.env.SLACK_BOT_TOKEN,
-  signingSecret: process.env.SLACK_SIGNING_SECRET,
+const morgan = require('morgan');
+app.use(morgan('tiny'));
+
+const todoRoutes = require('./routes/todos');
+
+app.use('/todos', todoRoutes)
+
+
+app.use((err, req, res, next) => {
+  if (err.stack) console.log(err.stack)
+
+  res.status(err.status || 500);
+
+  return res.json({
+    error: err,
+    message: err.message
+  });
 });
 
-app.event("app_home_opened", async ({ event, client }) => {
-  try {
-    const result = await client.views.publish({
-      // Use the user ID associated with the event
-      user_id: event.user,
-      view: {
-        type: "home",
-        blocks: [
-          {
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: "*Today's Todo List*",
-            },
-          },
-          {
-            type: "actions",
-            elements: [
-              {
-                type: "checkboxes",
-                options: [
-                  {
-                    text: {
-                      type: "plain_text",
-                      text: "Clean Dylan's litterbox :cat:",
-                      emoji: true,
-                    },
-                    value: "value-0",
-                  },
-                  {
-                    text: {
-                      type: "plain_text",
-                      text: "Take out the trash",
-                      emoji: true,
-                    },
-                    value: "value-1",
-                  },
-                  {
-                    text: {
-                      type: "plain_text",
-                      text: "Pay taxes",
-                      emoji: true,
-                    },
-                    value: "value-2",
-                  },
-                ],
-                action_id: "actionId-0",
-              },
-            ],
-          },
-          {
-            type: "actions",
-            elements: [
-              {
-                type: "button",
-                text: {
-                  type: "plain_text",
-                  text: "Add Todo",
-                  emoji: true,
-                },
-                value: "click_me_123",
-                action_id: "add-todo",
-              },
-            ],
-          },
-          {
-            type: "actions",
-            elements: [
-              {
-                type: "button",
-                text: {
-                  type: "plain_text",
-                  text: "Add Reminder",
-                  emoji: true,
-                },
-                value: "click_me_123",
-                action_id: "add-reminder",
-              },
-            ],
-          },
-        ],
-      },
-    });
-
-    console.log(result);
-  } catch (error) {
-    console.error(error);
-  }
+app.listen(3000, () => {
+  console.log(`Server is starting on 3000`);
 });
-
-app.action("add-todo", async ({ action, ack }) => {
-  await ack();
-});
-
-(async () => {
-  await app.start(process.env.PORT || 3000);
-
-  console.log("APP IS RUNNING!");
-})();
