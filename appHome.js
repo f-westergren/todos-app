@@ -2,30 +2,49 @@ const axios = require('axios');
 const moment = require('moment');
 
 const apiUrl = 'https://slack.com/api';
-const dbUrl = 'http://localhost:3000';
+const dbUrl = process.env.DB_URL || 'http://localhost:3000';
 
-const updateView = async () => {
-	let today = moment().format('YYYY-MM-DD');
-	let todoOptions = [];
-	let initialOptions = [];
-	let noTodos = {
-		type: 'section',
-		text: {
-			type: 'mrkdwn',
-			text: `Nothing to do today!`
+const config = {
+	headers: {
+		Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+		'Content-type': 'application/json;charset=utf8'
+	}
+};
+
+const addTodoBtn = {
+	type: 'actions',
+	block_id: 'add-todo',
+	elements: [
+		{
+			type: 'button',
+			text: {
+				type: 'plain_text',
+				text: 'Add Todo'
+			},
+			value: 'add-todo',
+			action_id: 'add-todo'
 		}
-	};
-	let checkboxes = {
-		type: 'actions',
-		block_id: 'todos',
-		elements: [
-			{
-				type: 'checkboxes',
-				action_id: 'check',
-				options: todoOptions
-			}
-		]
-	};
+	]
+};
+
+const markTodoAsDoneBtn = {
+	type: 'actions',
+	block_id: 'mark-todo',
+	elements: [
+		{
+			type: 'button',
+			text: {
+				type: 'plain_text',
+				text: 'Mark Todo as Done'
+			},
+			value: 'mark-todo',
+			action_id: 'mark-todo'
+		}
+	]
+};
+
+const updateTodoBlocks = async () => {
+	let todaysTodos = [];
 	let blocks = [
 		{
 			type: 'section',
@@ -34,60 +53,45 @@ const updateView = async () => {
 				type: 'mrkdwn',
 				text: `*Today's Todo List* - ${moment().format('dddd, MMMM Do YYYY')}`
 			}
-		},
-		{
-			type: 'actions',
-			block_id: 'add-todo-button',
-			elements: [
-				{
-					type: 'button',
-					text: {
-						type: 'plain_text',
-						text: 'Add Todo'
-					},
-					value: 'add-todo',
-					action_id: 'add-todo'
-				}
-			]
 		}
 	];
 
-	let newTodos = [];
-
 	try {
-		const result = await axios.get(`${dbUrl}/todos/${today}`);
-		newTodos.push(...result.data);
-	} catch (error) {
-		console.error(error);
+		const result = await axios.get(`${dbUrl}/todos/${moment().format('YYYY-MM-DD')}`);
+		todaysTodos.push(...result.data);
+	} catch (err) {
+		return next(err);
 	}
-	if (newTodos.length > 0) {
-		let todo = {};
-		for (const t of newTodos) {
-			todo = {
-				text: {
-					type: 'mrkdwn',
-					text: `${t.task}`
+
+	if (todaysTodos.length > 0) {
+		for (const t of todaysTodos) {
+			blocks.push(
+				{
+					type: 'section',
+					text: {
+						type: 'mrkdwn',
+						text: t.done ? `:white_check_mark: ~${t.task}~` : `:white_square: ${t.task}`
+					}
 				},
-				value: t.id.toString()
-			};
-			todoOptions.push(todo);
-			if (t.done) {
-				todo.text.text = `~${t.task}~`;
-				initialOptions.push(todo);
-			}
+				{
+					type: 'divider'
+				}
+			);
 		}
-		if (initialOptions.length > 0) checkboxes.elements[0]['initial_options'] = initialOptions;
+	} else {
+		blocks.push({
+			type: 'section',
+			text: {
+				type: 'mrkdwn',
+				text: `Nothing to do today!`
+			}
+		});
 	}
 
-	// Insert today's todos in blocks.
-	blocks.splice(1, 0, todoOptions.length > 0 ? checkboxes : noTodos);
+	blocks.push(addTodoBtn);
+	if (todaysTodos.length > 0) blocks.push(markTodoAsDoneBtn);
 
-	let view = {
-		type: 'home',
-		blocks: blocks
-	};
-
-	return JSON.stringify(view);
+	return JSON.stringify(blocks);
 };
 
 const displayHome = async (user, data) => {
@@ -95,19 +99,15 @@ const displayHome = async (user, data) => {
 		try {
 			await axios.post(`${dbUrl}/todos`, data);
 		} catch (error) {
-			console.error(error);
+			return next(err);
 		}
 	}
 
 	const args = {
 		user_id: user,
-		view: await updateView()
-	};
-
-	const config = {
-		headers: {
-			Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
-			'Content-type': 'application/json;charset=utf8'
+		view: {
+			type: 'home',
+			blocks: await updateTodoBlocks()
 		}
 	};
 
@@ -117,9 +117,9 @@ const displayHome = async (user, data) => {
 		if (result.data.error) {
 			console.log(result.data.error);
 		}
-	} catch (e) {
-		console.log(e);
+	} catch (err) {
+		console.log(err);
 	}
 };
 
-module.exports = { displayHome };
+module.exports = { displayHome, messageTodos };

@@ -6,6 +6,9 @@ const exists = fs.existsSync(dbFile);
 const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.Database(dbFile);
 
+const moment = require('moment');
+const today = moment().format('YYYY-MM-DD');
+
 const partialUpdate = require('../partialUpdate');
 
 router.use(express.json());
@@ -13,14 +16,15 @@ router.use(express.json());
 if (!exists) {
 	db.run(
 		`CREATE TABLE todos (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                date TEXT,
-                user TEXT,
-                task TEXT,
-                recurring TEXT,
-								rotate BOOLEAN DEFAULT false,
-                done BOOLEAN DEFAULT false
-            )`
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			team TEXT,
+			date TEXT,
+			user TEXT,
+			task TEXT,
+			recurring TEXT,
+			rotate BOOLEAN,
+			done BOOLEAN DEFAULT false
+		)`
 	);
 	console.log("New table 'todos' created!");
 }
@@ -82,29 +86,39 @@ router.post('/view', (req, res) => {
 	// This function is necessary because checkboxes in Slack doesn't
 	// notify which checkbox has been unchecked.
 
-	// Get IDs from checked todos.
-	let checkedTodos = {};
-	req.body.values.forEach((t) => {
-		checkedTodos[t.value] = true;
-	});
+	const values = req.body.values;
 
-	// Filter out all todos from today that aren't checked.
-	let todos = req.body.todos.map((t) => t.id);
-	todos = todos.filter((t) => !checkedTodos[t]);
-
-	// Update DB to set all unchecked todos done = false.
-	todos.forEach((t) => {
-		db.run(`UPDATE todos SET done = false WHERE id = ${t}`, (err) => {
+	// If all todos are unchecked
+	if (values.length === 0) {
+		db.run(`UPDATE todos SET done = false WHERE date = "${today}"`, (err) => {
 			if (err) res.send(err.message);
 		});
-	});
-
-	// Update DB to set all chcked todos done = true.
-	Object.keys(checkedTodos).forEach((t) => {
-		db.run(`UPDATE todos SET done = true WHERE id = ${t}`, (err) => {
-			if (err) res.send(err.message);
+	} else {
+		// Get IDs from checked todos.
+		let checkedTodos = {};
+		req.body.values.forEach((t) => {
+			checkedTodos[t.value] = true;
 		});
-	});
+
+		// Filter out all todos from today that aren't checked.
+		let todos = req.body.todos.map((t) => t.id);
+		todos = todos.filter((t) => !checkedTodos[t]);
+
+		// Update DB to set all unchecked todos done = false.
+		todos.forEach((t) => {
+			db.run(`UPDATE todos SET done = false WHERE id = ${t}`, (err) => {
+				if (err) res.send(err.message);
+			});
+		});
+
+		// Update DB to set all chcked todos done = true.
+		Object.keys(checkedTodos).forEach((t) => {
+			db.run(`UPDATE todos SET done = true WHERE id = ${t}`, (err) => {
+				if (err) res.send(err.message);
+			});
+		});
+	}
+	res.send('Updated todos');
 });
 
 module.exports = router;

@@ -1,8 +1,16 @@
 const axios = require('axios');
 const apiUrl = 'https://slack.com/api';
 
-const openModal = async (trigger_id) => {
+const config = {
+	headers: {
+		Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+		'Content-type': 'application/json;charset=utf8'
+	}
+};
+
+const addTodo = async (trigger_id, channel) => {
 	const modal = {
+		private_metadata: channel,
 		type: 'modal',
 		title: {
 			type: 'plain_text',
@@ -144,16 +152,91 @@ const openModal = async (trigger_id) => {
 		view: JSON.stringify(modal)
 	};
 
-	const config = {
-		headers: {
-			Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
-			'Content-type': 'application/json;charset=utf8'
+	const result = await axios.post(`${apiUrl}/views.open`, args, config);
+
+	try {
+		if (result.data.error) {
+			console.log(result.data.error);
 		}
+	} catch (err) {
+		return next(err);
+	}
+};
+
+const markTodo = async (trigger_id) => {
+	let todaysTodos = [];
+	try {
+		const result = await axios.get(`${dbUrl}/todos/${moment().format('YYYY-MM-DD')}`);
+		todaysTodos.push(...result.data);
+	} catch (err) {
+		return next(err);
+	}
+
+	let todoOptions = [];
+	let initialOptions = [];
+	let checkboxes = {
+		type: 'actions',
+		block_id: 'todos',
+		elements: [
+			{
+				type: 'checkboxes',
+				action_id: 'check',
+				options: todoOptions
+			}
+		]
 	};
+
+	if (todaysTodos.length > 0) {
+		let todo = {};
+		for (const t of todaysTodos) {
+			todo = {
+				text: {
+					type: 'mrkdwn',
+					text: `${t.task}`
+				},
+				value: t.id.toString()
+			};
+			todoOptions.push(todo);
+			if (t.done) {
+				initialOptions.push(todo);
+			}
+		}
+		if (initialOptions.length > 0) checkboxes.elements[0]['initial_options'] = initialOptions;
+	}
+
+	let view = {
+		type: 'modal',
+		title: {
+			type: 'plain_text',
+			text: moment().format('dddd, MMMM Do')
+		},
+		submit: {
+			type: 'plain_text',
+			text: 'Done'
+		},
+		close: {
+			type: 'plain_text',
+			text: 'Cancel'
+		},
+		blocks: [ checkboxes ]
+	};
+
+	const args = {
+		trigger_id: trigger_id,
+		view: JSON.stringify(view)
+	};
+
+	console.log(args);
 
 	const result = await axios.post(`${apiUrl}/views.open`, args, config);
 
-	//console.log(result.data);
+	try {
+		if (result.data.error) {
+			console.log(result.data.error);
+		}
+	} catch (err) {
+		return next(err);
+	}
 };
 
-module.exports = { openModal };
+module.exports = { addTodo, markTodo };
