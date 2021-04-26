@@ -76,24 +76,13 @@ router.post('/actions', async (req, res, next) => {
 		}
 	} else if (actions && actions[0].action_id.match(/mark-/)) {
 		appModals.markTodo(trigger_id);
-	} else if (actions && actions[0].action_id === 'check') {
-		// Get all todos from today to pass with update request.
-		const result = await axios.get(`${dbUrl}/todos/${today}`);
-
-		try {
-			// Updates DB when todos are checked/unchecked
-			axios.post(`${dbUrl}/todos/view`, { values: actions[0].selected_options, todos: result.data });
-			appHome.displayHome(user.id);
-		} catch (err) {
-			return next(err);
-		}
-	} else if (type === 'view_submission') {
+	} else if (type === 'view_submission' && view.callback_id.match(/add-todo/)) {
 		console.log(JSON.parse(req.body.payload));
 		// Modal forms submitted --
 		// TODO: Fix over 10...
 
 		// If the modal was triggered in a channel, post a message acknowledging todo was added
-		if (view.private_metadata) {
+		if (view.private_metadata !== '') {
 			const config = {
 				headers: {
 					Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
@@ -123,7 +112,7 @@ router.post('/actions', async (req, res, next) => {
 		const rotate = selectedUsers.length > 1 ? true : false;
 
 		// If no user is selected for task, use user who created todo.
-		const creatingUser = selectedUsers.length > 0 ? selectedUsers : user.id;
+		const creatingUser = selectedUsers.length > 0 ? selectedUsers.join(',') : user.id;
 
 		const data = {
 			task: todo01.task.value,
@@ -134,6 +123,19 @@ router.post('/actions', async (req, res, next) => {
 		};
 
 		appHome.displayHome(user.id, data);
+	} else if (type === 'view_submission' && view.callback_id.match(/mark-done/)) {
+		const result = await axios.get(`${dbUrl}/todos/${today}`);
+
+		try {
+			// Updates DB when todos are checked/unchecked
+			axios.post(`${dbUrl}/todos/view`, {
+				values: view.state.values.todos.check.selected_options,
+				todos: result.data
+			});
+			appHome.displayHome(user.id);
+		} catch (err) {
+			return next(err);
+		}
 	}
 
 	router.post('/slash', async (req, res) => {});
