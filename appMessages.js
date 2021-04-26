@@ -65,7 +65,8 @@ const sendTodos = async (channel) => {
 				type: 'section',
 				text: {
 					type: 'mrkdwn',
-					text: `If you want to mark a todo as :white_check_mark:, head over to my <slack://app?team=T01RDT7BASU&id=A01TNJG81LZ&tab=home|home tab>.`
+					text: `If you want to mark a todo as :white_check_mark:, 
+            head over to my <slack://app?team=T01RDT7BASU&id=A01TNJG81LZ&tab=home|home tab>.`
 				}
 			}
 		);
@@ -75,7 +76,7 @@ const sendTodos = async (channel) => {
 				type: 'section',
 				text: {
 					type: 'mrkdwn',
-					text: "Wow, today's todolist is completely empty so far! Enjoy the day! :sunglasses:"
+					text: "Wow, today's todo list is completely empty so far! Enjoy the day! :sunglasses:"
 				}
 			}
 		];
@@ -101,7 +102,7 @@ const sendTodos = async (channel) => {
 
 const sendReminders = async (todos) => {
 	for (const t of todos) {
-		let user = t.rotate.length > 0 ? `<@${t.rotate[0]}>` : 'guys';
+		let user = t.rotate ? `<@${t.rotate[0]}>` : 'guys';
 		let blocks = [
 			{
 				type: 'section',
@@ -122,7 +123,7 @@ const sendReminders = async (todos) => {
 						type: 'plain_text',
 						text: 'Done'
 					},
-					value: t.id,
+					value: `${t.id}`,
 					action_id: 'todo-done'
 				}
 			}
@@ -131,8 +132,10 @@ const sendReminders = async (todos) => {
 		const args = {
 			channel: process.env.SLACK_CHANNEL,
 			text: "There's something you need to do!",
-			blocks
+			blocks: JSON.stringify(blocks)
 		};
+
+		console.log(args);
 
 		const result = await axios.post(`${apiUrl}/chat.postMessage`, args, config);
 
@@ -146,4 +149,4 @@ const sendReminders = async (todos) => {
 	}
 };
 
-module.exports = { sendTodos };
+module.exports = { sendTodos, sendReminders };

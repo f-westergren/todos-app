@@ -1,5 +1,7 @@
 const axios = require('axios');
+const moment = require('moment');
 const apiUrl = 'https://slack.com/api';
+const dbUrl = process.env.DB_URL || 'http://localhost:3000';
 
 const config = {
 	headers: {
@@ -14,10 +16,6 @@ const addTodo = async (trigger_id, channel) => {
 		type: 'modal',
 		title: {
 			type: 'plain_text',
-			text: 'Add a new todo'
-		},
-		title: {
-			type: 'plain_text',
 			text: 'Add New Todo'
 		},
 		submit: {
@@ -28,6 +26,7 @@ const addTodo = async (trigger_id, channel) => {
 			type: 'plain_text',
 			text: 'Cancel'
 		},
+		callback_id: 'add-todo-modal',
 		blocks: [
 			{
 				type: 'input',
@@ -46,6 +45,7 @@ const addTodo = async (trigger_id, channel) => {
 				block_id: 'todo02',
 				element: {
 					type: 'datepicker',
+					initial_date: moment().format('YYYY-MM-DD'),
 					placeholder: {
 						type: 'plain_text',
 						text: 'Select a date'
@@ -159,7 +159,7 @@ const addTodo = async (trigger_id, channel) => {
 			console.log(result.data.error);
 		}
 	} catch (err) {
-		return next(err);
+		console.log(err);
 	}
 };
 
@@ -169,7 +169,7 @@ const markTodo = async (trigger_id) => {
 		const result = await axios.get(`${dbUrl}/todos/${moment().format('YYYY-MM-DD')}`);
 		todaysTodos.push(...result.data);
 	} catch (err) {
-		return next(err);
+		console.log(err);
 	}
 
 	let todoOptions = [];
@@ -206,6 +206,7 @@ const markTodo = async (trigger_id) => {
 
 	let view = {
 		type: 'modal',
+		callback_id: 'mark-done-modal',
 		title: {
 			type: 'plain_text',
 			text: moment().format('dddd, MMMM Do')

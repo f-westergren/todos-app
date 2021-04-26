@@ -122,4 +122,4 @@ const displayHome = async (user, data) => {
 	}
 };
 
-module.exports = { displayHome, messageTodos };
+module.exports = { displayHome };
