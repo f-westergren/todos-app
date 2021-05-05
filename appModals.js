@@ -239,7 +239,6 @@ const markTodo = async (trigger_id) => {
 };
 
 const deleteTodo = async (trigger_id, date = moment().format('YYYY-MM-DD'), view_id) => {
-	console.log('DATE', date);
 	let todos = [];
 	let blocks = [
 		{
@@ -304,7 +303,7 @@ const deleteTodo = async (trigger_id, date = moment().format('YYYY-MM-DD'), view
 	}
 
 	if (elements.length > 0) {
-		blocks.push({ type: 'actions', elements });
+		blocks.push({ type: 'actions', block_id: date, elements });
 	} else {
 		blocks.push({
 			type: 'section',

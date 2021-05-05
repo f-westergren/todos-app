@@ -78,7 +78,6 @@ router.post('/events', async (req, res) => {
 router.post('/actions', async (req, res, next) => {
 	res.send('');
 	const { trigger_id, user, actions, type, view, container, message } = JSON.parse(req.body.payload);
-	console.log(actions);
 	if (actions && actions[0].action_id.match(/add-todo/)) {
 		// Open a modal window with forms to be submitted by a user
 
@@ -153,8 +152,15 @@ router.post('/actions', async (req, res, next) => {
 		}
 	} else if (actions && actions[0].action_id === 'delete-todo') {
 		appModals.deleteTodo(trigger_id);
-	} else if (actions && actions[0].action_id.match(/delete-todo-date/)) {
+	} else if (actions && actions[0].action_id === 'delete-todo-date') {
 		appModals.deleteTodo(trigger_id, actions[0].selected_date, view.id);
+	} else if (actions && actions[0].action_id.match(/delete-/)) {
+		try {
+			axios.delete(`${dbUrl}/${actions[0].value}`);
+		} catch (err) {
+			return next(err);
+		}
+		appModals.deleteTodo(trigger_id, actions[0].block_id, view.id);
 	} else if (view && view.callback_id.match(/add-todo-modal/)) {
 		// Modal forms submitted --
 		// TODO: Fix over 10...
