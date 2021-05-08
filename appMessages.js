@@ -4,6 +4,8 @@ const moment = require('moment');
 const apiUrl = 'https://slack.com/api';
 const dbUrl = process.env.DB_URL || 'http://localhost:3000/todos';
 
+const { section, button } = require('./blocks');
+
 const config = {
 	headers: {
 		Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
@@ -14,17 +16,7 @@ const config = {
 const addTodoBtn = {
 	type: 'actions',
 	block_id: 'add-todo',
-	elements: [
-		{
-			type: 'button',
-			text: {
-				type: 'plain_text',
-				text: 'Add Todo'
-			},
-			value: 'add-todo',
-			action_id: 'add-todo'
-		}
-	]
+	elements: [ button('Add Todo', 'add-todo', 'primary') ]
 };
 
 const sendTodos = async (channel) => {
@@ -38,14 +30,9 @@ const sendTodos = async (channel) => {
 	}
 
 	let blocks = [
-		{
-			type: 'section',
-			text: {
-				type: 'mrkdwn',
-				text:
-					"Good morning, friends! Today's gonna be an amazing day :smile: \n Today you need to take care of the following:"
-			}
-		}
+		section(
+			"Good morning, friends! Today's gonna be an amazing day :smile: \n Today you need to take care of the following:"
+		)
 	];
 
 	if (todaysTodos.length > 0) {
@@ -55,32 +42,13 @@ const sendTodos = async (channel) => {
 		}
 
 		blocks.push(
-			{
-				type: 'section',
-				text: {
-					type: 'mrkdwn',
-					text: todos.join('\n')
-				}
-			},
-			{
-				type: 'section',
-				text: {
-					type: 'mrkdwn',
-					text:
-						'If you want to mark a todo as :white_check_mark:, head over to my <slack://app?team=T01RDT7BASU&id=A01TNJG81LZ&tab=home|home tab>.'
-				}
-			}
+			section(todos.join('\n')),
+			section(
+				'If you want to mark a todo as :white_check_mark:, head over to my <slack://app?team=T01RDT7BASU&id=A01TNJG81LZ&tab=home|home tab>.'
+			)
 		);
 	} else {
-		blocks = [
-			{
-				type: 'section',
-				text: {
-					type: 'mrkdwn',
-					text: "Wow, today's todo list is completely empty so far! Enjoy the day! :sunglasses:"
-				}
-			}
-		];
+		blocks = [ section("Wow, today's todo list is completely empty so far! Enjoy the day! :sunglasses:") ];
 	}
 
 	blocks.push(addTodoBtn);
@@ -116,42 +84,13 @@ const sendReminders = async () => {
 	for (const t of todaysTodos) {
 		let user = t.rotate ? `<@${t.rotate.split(',')[0]}>` : 'guys';
 		let blocks = [
-			{
-				type: 'section',
-				text: {
-					type: 'mrkdwn',
-					text: `Hey ${user}, just a friendly reminder, you still haven't done this:`
-				}
-			},
-			{
-				type: 'section',
-				text: {
-					type: 'mrkdwn',
-					text: `:white_square: ${t.task}`
-				}
-			},
+			section(`Hey ${user}, just a friendly reminder, you still haven't done this:`),
+			section(`:white_square: ${t.task}`),
 			{
 				type: 'actions',
 				elements: [
-					{
-						type: 'button',
-						style: 'primary',
-						text: {
-							type: 'plain_text',
-							text: 'Mark as done'
-						},
-						value: `${t.id}`,
-						action_id: 'mark-done-channel'
-					},
-					{
-						type: 'button',
-						text: {
-							type: 'plain_text',
-							text: 'Stop reminding me'
-						},
-						value: `${t.id}`,
-						action_id: 'stop-reminder'
-					}
+					button('Mark as done', t.id, 'mark-done-channel', 'primary'),
+					button('Stop reminding me', t.id, 'stop-reminder')
 				]
 			}
 		];
@@ -207,7 +146,10 @@ const endOfDay = async () => {
 
 		if (t.rotate) t.rotate = rotateUser(t.rotate);
 
-		await axios.post(dbUrl, t);
+		if (t.done) {
+			t.done = false;
+			await axios.post(dbUrl, t);
+		}
 	}
 
 	todaysTodos = todaysTodos.filter((t) => !t.done);
@@ -216,26 +158,13 @@ const endOfDay = async () => {
 
 	if (todaysTodos.length > 0) {
 		blocks = [
-			{
-				type: 'section',
-				text: {
-					type: 'plain_text',
-					text: "Hopefully you're sleeping now. Just FYI though, there were a few things that didn't get done today: ",
-					emoji: true
-				}
-			}
+			section("Hopefully you're sleeping now. Just FYI though, there were a few things that didn't get done today: ")
 		];
 		let todos = [];
 		for (const t of todaysTodos) {
 			todos.push(`:x: ${t.task}`);
 		}
-		blocks.push({
-			type: 'section',
-			text: {
-				type: 'mrkdwn',
-				text: todos.join('\n')
-			}
-		});
+		blocks.push(section(todos.join('\n')));
 	}
 
 	const args = {

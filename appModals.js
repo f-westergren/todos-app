@@ -3,6 +3,8 @@ const moment = require('moment');
 const apiUrl = 'https://slack.com/api';
 const dbUrl = process.env.DB_URL || 'http://localhost:3000';
 
+const { option, section } = require('./blocks');
+
 const config = {
 	headers: {
 		Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
@@ -70,55 +72,13 @@ const addTodo = async (trigger_id, channel) => {
 						value: 'no'
 					},
 					options: [
-						{
-							text: {
-								type: 'plain_text',
-								text: 'No'
-							},
-							value: 'no'
-						},
-						{
-							text: {
-								type: 'plain_text',
-								text: 'Every day'
-							},
-							value: 'every-day'
-						},
-						{
-							text: {
-								type: 'plain_text',
-								text: 'Every other day'
-							},
-							value: 'every-other-day'
-						},
-						{
-							text: {
-								type: 'plain_text',
-								text: 'Every week'
-							},
-							value: 'every-week'
-						},
-						{
-							text: {
-								type: 'plain_text',
-								text: 'Every other week'
-							},
-							value: 'every-other-week'
-						},
-						{
-							text: {
-								type: 'plain_text',
-								text: 'Every month'
-							},
-							value: 'every-month'
-						},
-						{
-							text: {
-								type: 'plain_text',
-								text: 'Every other month'
-							},
-							value: 'every-other-month'
-						}
+						option('No', 'no'),
+						option('Every day', 'every-day'),
+						option('Every other day', 'every-other-day'),
+						option('Every week', 'every-week'),
+						option('Every other week', 'every-other-week'),
+						option('Every month', 'every-month'),
+						option('Every other month', 'every-other-month')
 					],
 					action_id: 'recurring'
 				},
@@ -255,13 +215,7 @@ const deleteTodo = async (trigger_id, date = moment().format('YYYY-MM-DD'), view
 				text: 'Select a date to show todos'
 			}
 		},
-		{
-			type: 'section',
-			text: {
-				type: 'plain_text',
-				text: ' '
-			}
-		}
+		section(' ')
 	];
 	try {
 		const result = await axios.get(`${dbUrl}/${date}`);
@@ -305,13 +259,7 @@ const deleteTodo = async (trigger_id, date = moment().format('YYYY-MM-DD'), view
 	if (elements.length > 0) {
 		blocks.push({ type: 'actions', block_id: date, elements });
 	} else {
-		blocks.push({
-			type: 'section',
-			text: {
-				type: 'plain_text',
-				text: 'No todos on this date.'
-			}
-		});
+		blocks.push(section('No todos on this date.'));
 	}
 
 	let view = {

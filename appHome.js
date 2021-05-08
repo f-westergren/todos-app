@@ -4,6 +4,8 @@ const moment = require('moment');
 const apiUrl = 'https://slack.com/api';
 const dbUrl = process.env.DB_URL || 'http://localhost:3000/todos';
 
+const { section, button } = require('./blocks');
+
 const config = {
 	headers: {
 		Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
@@ -15,50 +17,15 @@ const buttons = {
 	type: 'actions',
 	block_id: 'add-todo',
 	elements: [
-		{
-			type: 'button',
-			style: 'primary',
-			text: {
-				type: 'plain_text',
-				text: 'Add Todo'
-			},
-			value: 'add-todo',
-			action_id: 'add-todo'
-		},
-		{
-			type: 'button',
-			style: 'primary',
-			text: {
-				type: 'plain_text',
-				text: 'Mark Todo as Done'
-			},
-			value: 'mark-home',
-			action_id: 'mark-done-home'
-		},
-		{
-			type: 'button',
-			text: {
-				type: 'plain_text',
-				text: 'Delete Todos'
-			},
-			value: 'mark-home',
-			action_id: 'delete-todo'
-		}
+		button('Add Todo', 'add-todo', 'add-todo', 'primary'),
+		button('Mark Todo as Done', 'mark-done-home', 'mark-done-home', 'primary'),
+		button('Delete Todos', 'delete-todo', 'delete-todo')
 	]
 };
 
 const updateTodoBlocks = async () => {
 	let todaysTodos = [];
-	let blocks = [
-		{
-			type: 'section',
-			block_id: 'header',
-			text: {
-				type: 'mrkdwn',
-				text: `*Today's Todo List* - ${moment().format('dddd, MMMM Do YYYY')}`
-			}
-		}
-	];
+	let blocks = [ section(`*Today's Todo List* - ${moment().format('dddd, MMMM Do YYYY')}`) ];
 
 	try {
 		const result = await axios.get(`${dbUrl}/${moment().format('YYYY-MM-DD')}`);
@@ -69,27 +36,12 @@ const updateTodoBlocks = async () => {
 
 	if (todaysTodos.length > 0) {
 		for (const t of todaysTodos) {
-			blocks.push(
-				{
-					type: 'section',
-					text: {
-						type: 'mrkdwn',
-						text: t.done ? `:white_check_mark: ~${t.task}~` : `:white_square: ${t.task}`
-					}
-				},
-				{
-					type: 'divider'
-				}
-			);
+			blocks.push(section(t.done ? `:white_check_mark: ~${t.task}~` : `:white_square: ${t.task}`), {
+				type: 'divider'
+			});
 		}
 	} else {
-		blocks.push({
-			type: 'section',
-			text: {
-				type: 'mrkdwn',
-				text: `Nothing to do today!`
-			}
-		});
+		blocks.push(section(`Nothing to do today!`));
 	}
 	blocks.push(buttons);
 
