@@ -189,7 +189,6 @@ router.post('/actions', async (req, res, next) => {
 		const rotate = selectedUsers.length > 1 ? selectedUsers.join(',') : null;
 
 		// If no user is selected for task, use user who created todo.
-		// const creatingUser = selectedUsers.length > 0 ? selectedUsers.join(',') : user.id;
 
 		const data = {
 			task: todo01.task.value,
@@ -203,15 +202,44 @@ router.post('/actions', async (req, res, next) => {
 	} else if (type === 'view_submission' && view.callback_id.match(/mark-done/)) {
 		const result = await axios.get(`${dbUrl}/${moment().format('YYYY-MM-DD')}`);
 
+		const selectedOptions = view.state.values.todos.check.selected_options;
+
 		try {
 			// Updates DB when todos are checked/unchecked
 			axios.post(`${dbUrl}/view`, {
-				values: view.state.values.todos.check.selected_options,
+				values: selectedOptions,
 				todos: result.data
 			});
 			appHome.displayHome(user.id);
 		} catch (err) {
 			return next(err);
+		}
+
+		if (selectedOptions.length > 0) {
+			let todos = [];
+			selectedOptions.forEach((o) => todos.push(`"${o.text.text}"`));
+
+			todos = todos.join(', ');
+
+			// If more than one todo, replace last comma with 'and'
+			todos = todos.replace(/,([^,]*)$/, ' and' + '$1');
+
+			const args = {
+				channel: process.env.SLACK_CHANNEL,
+				text: `Well done, <@${user.id}>! I've marked ${todos} as done!`
+			};
+
+			console.log(args);
+
+			const message = await axios.post(`${apiUrl}/chat.postMessage`, args, config);
+
+			try {
+				if (message.data.error) {
+					console.log(message.data.error);
+				}
+			} catch (err) {
+				return next(err);
+			}
 		}
 	}
 
