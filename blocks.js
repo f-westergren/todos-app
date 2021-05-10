@@ -15,7 +15,7 @@ const button = (text, value, action_id, style) => {
 			type: 'plain_text',
 			text
 		},
-		value,
+		value: `${value}`,
 		action_id
 	};
 
