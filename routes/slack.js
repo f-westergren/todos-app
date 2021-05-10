@@ -78,6 +78,7 @@ router.post('/events', async (req, res) => {
 router.post('/actions', async (req, res, next) => {
 	res.send('');
 	const { trigger_id, user, actions, type, view, container, message } = JSON.parse(req.body.payload);
+
 	if (actions && actions[0].action_id.match(/add-todo/)) {
 		// Open a modal window with forms to be submitted by a user
 
@@ -99,7 +100,7 @@ router.post('/actions', async (req, res, next) => {
 			}
 		};
 		try {
-			axios.patch(dbUrl, data);
+			axios.patch(`${dbUrl}/${actions[0].value}`, data);
 		} catch (err) {
 			return next(err);
 		}
@@ -129,7 +130,7 @@ router.post('/actions', async (req, res, next) => {
 			}
 		};
 		try {
-			axios.patch(dbUrl, data);
+			axios.patch(`${dbUrl}/${actions[0].value}`, data);
 		} catch (err) {
 			return next(err);
 		}
