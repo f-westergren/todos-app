@@ -99,7 +99,7 @@ router.post('/actions', async (req, res, next) => {
 			}
 		};
 		try {
-			axios.patch(`${dbUrl}/${actions[0].value}`, data);
+			axios.patch(`${dbUrl}/${data.table}`, data);
 		} catch (err) {
 			return next(err);
 		}
@@ -129,7 +129,7 @@ router.post('/actions', async (req, res, next) => {
 			}
 		};
 		try {
-			axios.patch(`${dbUrl}/${actions[0].value}`, data);
+			axios.patch(`${dbUrl}/${data.table}`, data);
 		} catch (err) {
 			return next(err);
 		}

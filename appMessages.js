@@ -147,13 +147,13 @@ const endOfDay = async () => {
 		if (t.rotate) t.rotate = rotateUser(t.rotate);
 
 		// Add recurring todos to database
-		if (t.done && t.recurring) {
+		if (t.done && t.recurring !== 'no') {
 			t.done = false;
 			await axios.post(dbUrl, t);
 		}
 
 		// If todo wasn't completed, and isn't recurring, add it to database.
-		if (!t.done && !t.recurring) {
+		if (!t.done && t.recurring === 'no') {
 			t.date = t.date = addTime(1, 'days');
 			await axios.post(dbUrl, t);
 		}
