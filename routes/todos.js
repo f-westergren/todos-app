@@ -10,6 +10,7 @@ const moment = require('moment');
 const today = moment().format('YYYY-MM-DD');
 
 const partialUpdate = require('../partialUpdate');
+const { checkToken } = require('../middleware/auth');
 
 router.use(express.json());
 
@@ -29,7 +30,7 @@ if (!exists) {
 	console.log("New table 'todos' created!");
 }
 
-router.get('/', (req, res) => {
+router.get('/', checkToken, (req, res) => {
 	let sql = 'SELECT * FROM todos';
 	db.all(sql, (err, rows) => {
 		if (err) {
@@ -39,7 +40,7 @@ router.get('/', (req, res) => {
 	});
 });
 
-router.get('/:date', (req, res) => {
+router.get('/:date', checkToken, (req, res) => {
 	let sql = `SELECT * FROM todos WHERE date = ?`;
 	db.all(sql, req.params.date, (err, rows) => {
 		if (err) {
@@ -49,7 +50,7 @@ router.get('/:date', (req, res) => {
 	});
 });
 
-router.post('/', (req, res) => {
+router.post('/', checkToken, (req, res) => {
 	const { date, task, user, recurring, done, rotate } = req.body;
 	let sql = `INSERT INTO todos(date, task, user, recurring, done, rotate) VALUES(?, ?, ?, ?, ?, ?)`;
 	db.run(sql, [ date, task, user, recurring, done, rotate ], function(err) {
@@ -60,7 +61,7 @@ router.post('/', (req, res) => {
 	});
 });
 
-router.patch('/:id', (req, res) => {
+router.patch('/:id', checkToken, (req, res) => {
 	const { table, data } = req.body;
 	let sql = partialUpdate(table, data, req.params.id);
 	db.run(sql, function(err) {
@@ -71,7 +72,7 @@ router.patch('/:id', (req, res) => {
 	});
 });
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', checkToken, (req, res) => {
 	let sql = `DELETE FROM todos WHERE id= ?`;
 	db.run(sql, req.params.id, function(err) {
 		if (err) {
@@ -81,7 +82,7 @@ router.delete('/:id', (req, res) => {
 	});
 });
 
-router.post('/view', (req, res) => {
+router.post('/view', checkToken, (req, res) => {
 	// Updates DB when totods are checked/unchecked from home tab
 	// This function is necessary because checkboxes in Slack doesn't
 	// notify which checkbox has been unchecked.
