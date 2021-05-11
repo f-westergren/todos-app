@@ -1,17 +1,8 @@
 const axios = require('axios');
 const moment = require('moment');
 
-const apiUrl = 'https://slack.com/api';
-const dbUrl = process.env.DB_URL || 'http://localhost:3000/todos';
-
+const { API_URL, DB_URL, DB_HEADERS, SLACK_HEADERS, SLACK_TEAM_ID, SLACK_APP_ID, SLACK_CHANNEL } = require('./config');
 const { section, button } = require('./blocks');
-
-const config = {
-	headers: {
-		Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
-		'Content-type': 'application/json;charset=utf8'
-	}
-};
 
 const addTodoBtn = {
 	type: 'actions',
@@ -23,17 +14,13 @@ const sendTodos = async (channel) => {
 	let todaysTodos = [];
 
 	try {
-		const result = await axios.get(`${dbUrl}/${moment().format('YYYY-MM-DD')}`);
+		const result = await axios.get(`${DB_URL}/${moment().format('YYYY-MM-DD')}`, DB_HEADERS);
 		todaysTodos.push(...result.data);
 	} catch (err) {
 		console.log(err.message);
 	}
 
-	let blocks = [
-		section(
-			"Good morning, friends! Today's gonna be an amazing day :smile: \n Today you need to take care of the following:"
-		)
-	];
+	let blocks = [ section('Good morning, friends! \n Today you need to take care of the following:') ];
 
 	if (todaysTodos.length > 0) {
 		let todos = [];
@@ -44,7 +31,8 @@ const sendTodos = async (channel) => {
 		blocks.push(
 			section(todos.join('\n')),
 			section(
-				'If you want to mark a todo as :white_check_mark:, head over to my <slack://app?team=T01RDT7BASU&id=A01TNJG81LZ&tab=home|home tab>.'
+				`If you want to mark a todo as :white_check_mark:, head over to my 
+				<slack://app?team=${SLACK_TEAM_ID}&id=${SLACK_APP_ID}&tab=home|home tab>.`
 			)
 		);
 	} else {
@@ -55,24 +43,22 @@ const sendTodos = async (channel) => {
 
 	const args = {
 		text: "Check out today's todo list!",
-		channel: channel,
+		channel,
 		blocks
 	};
-	const result = await axios.post(`${apiUrl}/chat.postMessage`, args, config);
 
 	try {
-		if (result.data.error) {
-			console.log(result.data.error);
-		}
+		const result = await axios.post(`${API_URL}/chat.postMessage`, args, SLACK_HEADERS);
+		if (result.data.error) console.log(result.data.error);
 	} catch (err) {
-		console.log(err);
+		return next(err);
 	}
 };
 
 const sendReminders = async () => {
 	let todaysTodos = [];
 	try {
-		const result = await axios.get(`${dbUrl}/${moment().format('YYYY-MM-DD')}`);
+		const result = await axios.get(`${DB_URL}/${moment().format('YYYY-MM-DD')}`, DB_HEADERS);
 		todaysTodos.push(...result.data);
 	} catch (err) {
 		console.log(err.message);
@@ -96,19 +82,16 @@ const sendReminders = async () => {
 		];
 
 		const args = {
-			channel: process.env.SLACK_CHANNEL,
+			channel: SLACK_CHANNEL,
 			text: "There's something you need to do!",
 			blocks: JSON.stringify(blocks)
 		};
 
-		const result = await axios.post(`${apiUrl}/chat.postMessage`, args, config);
-
 		try {
-			if (result.data.error) {
-				console.log(result.data.error);
-			}
+			const result = await axios.post(`${API_URL}/chat.postMessage`, args, SLACK_HEADERS);
+			if (result.data.error) console.log(result.data.error);
 		} catch (err) {
-			console.log(err);
+			return next(err);
 		}
 	}
 };
@@ -130,7 +113,7 @@ const endOfDay = async () => {
 	};
 
 	try {
-		const result = await axios.get(`${dbUrl}/${moment().format('YYYY-MM-DD')}`);
+		const result = await axios.get(`${DB_URL}/${moment().format('YYYY-MM-DD')}`, DB_HEADERS);
 		todaysTodos.push(...result.data);
 	} catch (err) {
 		console.log(err.message);
@@ -149,13 +132,13 @@ const endOfDay = async () => {
 		// Add recurring todos to database
 		if (t.done && t.recurring !== 'no') {
 			t.done = false;
-			await axios.post(dbUrl, t);
+			await axios.post(DB_URL, t, DB_HEADERS);
 		}
 
 		// If todo wasn't completed, and isn't recurring, add it to database.
 		if (!t.done && t.recurring === 'no') {
 			t.date = t.date = addTime(1, 'days');
-			await axios.post(dbUrl, t);
+			await axios.post(DB_URL, t, DB_HEADERS);
 		}
 	}
 
@@ -175,19 +158,16 @@ const endOfDay = async () => {
 	}
 
 	const args = {
-		channel: process.env.SLACK_CHANNEL,
+		channel: SLACK_CHANNEL,
 		text: 'End of day report',
 		blocks: JSON.stringify(blocks)
 	};
 
-	const result = await axios.post(`${apiUrl}/chat.postMessage`, args, config);
-
 	try {
-		if (result.data.error) {
-			console.log(result.data.error);
-		}
+		const result = await axios.post(`${API_URL}/chat.postMessage`, args, SLACK_HEADERS);
+		if (result.data.error) console.log(result.data.error);
 	} catch (err) {
-		console.log(err);
+		return next(err);
 	}
 };
 

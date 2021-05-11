@@ -3,12 +3,13 @@ const router = express.Router();
 const axios = require('axios');
 const moment = require('moment');
 const cron = require('node-cron');
-const apiUrl = 'https://slack.com/api';
-const dbUrl = process.env.DB_URL || 'http://localhost:3000/todos';
+
+const { API_URL, DB_URL, SLACK_CHANNEL, DB_HEADERS, SLACK_HEADERS } = require('../config');
 
 const appHome = require('../appHome');
 const appMessages = require('../appMessages');
 const appModals = require('../appModals');
+const appActions = require('../appActions');
 const signature = require('../verifySignature');
 
 const rawBodyBuffer = (req, res, buf, encoding) => {
@@ -17,19 +18,12 @@ const rawBodyBuffer = (req, res, buf, encoding) => {
 	}
 };
 
-const config = {
-	headers: {
-		Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
-		'Content-type': 'application/json;charset=utf8'
-	}
-};
-
 router.use(express.urlencoded({ verify: rawBodyBuffer, extended: true }));
 router.use(express.json({ verify: rawBodyBuffer }));
 
 // Send daily todo list every day at 9 AM
 const sendDailyTodoList = cron.schedule('0 9 * * *', () => {
-	appMessages.sendTodos(process.env.SLACK_CHANNEL);
+	appMessages.sendTodos(SLACK_CHANNEL);
 });
 sendDailyTodoList.start();
 
@@ -93,17 +87,7 @@ router.post('/actions', async (req, res, next) => {
 		appModals.markTodo(trigger_id);
 	} else if (actions && actions[0].action_id.match(/mark-done-channel/)) {
 		// Marks todo as done when user clicks 'Mark as done' in channel message.
-		const data = {
-			table: 'todos',
-			data: {
-				done: true
-			}
-		};
-		try {
-			axios.patch(`${dbUrl}/${actions[0].value}`, data);
-		} catch (err) {
-			return next(err);
-		}
+		appActions.updateTodo(actions[0].value, { done: true });
 
 		// Grabs the todo text and strips the initial :white_square: emoji.
 		const todo = message.blocks[1].text.text.slice(15);
@@ -111,29 +95,15 @@ router.post('/actions', async (req, res, next) => {
 			channel: container.channel_id,
 			text: `Well done, <@${user.id}>! I've marked "${todo}" as done!`
 		};
-
-		const result = await axios.post(`${apiUrl}/chat.postMessage`, args, config);
-
 		try {
-			if (result.data.error) {
-				console.log(result.data.error);
-			}
+			const result = await axios.post(`${API_URL}/chat.postMessage`, args, SLACK_HEADERS);
+			if (result.data.error) console.log(result.data.error);
 		} catch (err) {
 			return next(err);
 		}
 	} else if (actions && actions[0].action_id.match(/stop-reminder/)) {
 		// Turns off reminders when user clicks 'Stop reminding me' in channel message.
-		const data = {
-			table: 'todos',
-			data: {
-				reminder: false
-			}
-		};
-		try {
-			axios.patch(`${dbUrl}/${actions[0].value}`, data);
-		} catch (err) {
-			return next(err);
-		}
+		appActions.updateTodo(actions[0].value, { reminder: false });
 
 		// Grabs the todo text and strips the initial :white_square: emoji.
 		const todo = message.blocks[1].text.text.slice(15);
@@ -141,13 +111,9 @@ router.post('/actions', async (req, res, next) => {
 			channel: container.channel_id,
 			text: `Okay, <@${user.id}>! I'll stop reminding you about "${todo}".`
 		};
-
-		const result = await axios.post(`${apiUrl}/chat.postMessage`, args, config);
-
 		try {
-			if (result.data.error) {
-				console.log(result.data.error);
-			}
+			const result = await axios.post(`${API_URL}/chat.postMessage`, args, SLACK_HEADERS);
+			if (result.data.error) console.log(result.data.error);
 		} catch (err) {
 			return next(err);
 		}
@@ -157,7 +123,7 @@ router.post('/actions', async (req, res, next) => {
 		appModals.deleteTodo(trigger_id, actions[0].selected_date, view.id);
 	} else if (actions && actions[0].action_id.match(/delete-/)) {
 		try {
-			axios.delete(`${dbUrl}/${actions[0].value}`);
+			axios.delete(`${DB_URL}/${actions[0].value}`, DB_HEADERS);
 		} catch (err) {
 			return next(err);
 		}
@@ -174,12 +140,9 @@ router.post('/actions', async (req, res, next) => {
 				text: 'Added todo!'
 			};
 
-			const result = await axios.post(`${apiUrl}/chat.postEphemeral`, args, config);
-
 			try {
-				if (result.data.error) {
-					console.log(result.data.error);
-				}
+				const result = await axios.post(`${API_URL}/chat.postEphemeral`, args, SLACK_HEADERS);
+				if (result.data.error) console.log(result.data.error);
 			} catch (err) {
 				return next(err);
 			}
@@ -201,43 +164,47 @@ router.post('/actions', async (req, res, next) => {
 
 		appHome.displayHome(user.id, data);
 	} else if (type === 'view_submission' && view.callback_id.match(/mark-done/)) {
-		const result = await axios.get(`${dbUrl}/${moment().format('YYYY-MM-DD')}`);
+		const result = await axios.get(`${DB_URL}/${moment().format('YYYY-MM-DD')}`, DB_HEADERS);
 
+		const alreadyFinished = view.private_metadata;
 		const selectedOptions = view.state.values.todos.check.selected_options;
 
 		try {
 			// Updates DB when todos are checked/unchecked
-			axios.post(`${dbUrl}/view`, {
-				values: selectedOptions,
-				todos: result.data
-			});
+			axios.post(
+				`${DB_URL}/view`,
+				{
+					values: selectedOptions,
+					todos: result.data
+				},
+				DB_HEADERS
+			);
 			appHome.displayHome(user.id);
 		} catch (err) {
 			return next(err);
 		}
 
-		if (selectedOptions.length > 0) {
+		// This creates the message to send when a todo is marked as done. Only todos that weren't
+		// already marked as finished will be posted.
+		if (selectedOptions.length > alreadyFinished.split(',').length) {
 			let todos = [];
-			selectedOptions.forEach((o) => todos.push(`"${o.text.text}"`));
+
+			selectedOptions.forEach((o) => {
+				if (!alreadyFinished.match(o.text.text)) todos.push(`"${o.text.text}"`);
+			});
 
 			todos = todos.join(', ');
-
 			// If more than one todo, replace last comma with 'and'
 			todos = todos.replace(/,([^,]*)$/, ' and' + '$1');
 
 			const args = {
-				channel: process.env.SLACK_CHANNEL,
+				channel: SLACK_CHANNEL,
 				text: `Well done, <@${user.id}>! I've marked ${todos} as done!`
 			};
 
-			console.log(args);
-
-			const message = await axios.post(`${apiUrl}/chat.postMessage`, args, config);
-
 			try {
-				if (message.data.error) {
-					console.log(message.data.error);
-				}
+				const message = await axios.post(`${API_URL}/chat.postMessage`, args, SLACK_HEADERS);
+				if (message.data.error) console.log(message.data.error);
 			} catch (err) {
 				return next(err);
 			}

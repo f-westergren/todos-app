@@ -1,17 +1,7 @@
 const axios = require('axios');
 const moment = require('moment');
-
-const apiUrl = 'https://slack.com/api';
-const dbUrl = process.env.DB_URL || 'http://localhost:3000/todos';
-
+const { API_URL, DB_URL, DB_HEADERS, SLACK_HEADERS } = require('./config');
 const { section, button } = require('./blocks');
-
-const config = {
-	headers: {
-		Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
-		'Content-type': 'application/json;charset=utf8'
-	}
-};
 
 const buttons = {
 	type: 'actions',
@@ -28,7 +18,7 @@ const updateTodoBlocks = async () => {
 	let blocks = [ section(`*Today's Todo List* - ${moment().format('dddd, MMMM Do YYYY')}`) ];
 
 	try {
-		const result = await axios.get(`${dbUrl}/${moment().format('YYYY-MM-DD')}`);
+		const result = await axios.get(`${DB_URL}/${moment().format('YYYY-MM-DD')}`, DB_HEADERS);
 		todaysTodos.push(...result.data);
 	} catch (err) {
 		console.log(err.message);
@@ -36,7 +26,7 @@ const updateTodoBlocks = async () => {
 
 	if (todaysTodos.length > 0) {
 		for (const t of todaysTodos) {
-			blocks.push(section(t.done ? `:white_check_mark: ~${t.task}~` : `:white_square: ${t.task}`), {
+			blocks.push(section(t.done ? `:white_check_mark: ~${t.task}~` : `:white_square: ${t.task}`, t.task), {
 				type: 'divider'
 			});
 		}
@@ -51,9 +41,9 @@ const updateTodoBlocks = async () => {
 const displayHome = async (user, data) => {
 	if (data) {
 		try {
-			await axios.post(`${dbUrl}`, data);
+			await axios.post(DB_URL, data, DB_HEADERS);
 		} catch (error) {
-			return next(err);
+			console.log(error);
 		}
 	}
 
@@ -65,14 +55,11 @@ const displayHome = async (user, data) => {
 		}
 	};
 
-	const result = await axios.post(`${apiUrl}/views.publish`, args, config);
-
 	try {
-		if (result.data.error) {
-			console.log(result.data.error);
-		}
+		const result = await axios.post(`${API_URL}/views.publish`, args, SLACK_HEADERS);
+		if (result.data.error) console.log(result.data.error);
 	} catch (err) {
-		console.log(err.message);
+		console.log(error);
 	}
 };
 

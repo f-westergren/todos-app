@@ -1,16 +1,9 @@
 const axios = require('axios');
 const moment = require('moment');
-const apiUrl = 'https://slack.com/api';
-const dbUrl = process.env.DB_URL || 'http://localhost:3000';
+
+const { API_URL, DB_URL, SLACK_HEADERS, DB_HEADERS } = require('./config');
 
 const { option, section } = require('./blocks');
-
-const config = {
-	headers: {
-		Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
-		'Content-type': 'application/json;charset=utf8'
-	}
-};
 
 const addTodo = async (trigger_id, channel) => {
 	const modal = {
@@ -112,21 +105,18 @@ const addTodo = async (trigger_id, channel) => {
 		view: JSON.stringify(modal)
 	};
 
-	const result = await axios.post(`${apiUrl}/views.open`, args, config);
-
 	try {
-		if (result.data.error) {
-			console.log(result.data.error);
-		}
+		const result = await axios.post(`${API_URL}/views.open`, args, SLACK_HEADERS);
+		if (result.data.error) console.log(result.data.error);
 	} catch (err) {
-		console.log(err);
+		return next(err);
 	}
 };
 
 const markTodo = async (trigger_id) => {
 	let todaysTodos = [];
 	try {
-		const result = await axios.get(`${dbUrl}/${moment().format('YYYY-MM-DD')}`);
+		const result = await axios.get(`${DB_URL}/${moment().format('YYYY-MM-DD')}`, DB_HEADERS);
 		todaysTodos.push(...result.data);
 	} catch (err) {
 		console.log(err.message);
@@ -134,6 +124,7 @@ const markTodo = async (trigger_id) => {
 
 	let todoOptions = [];
 	let initialOptions = [];
+	let finishedTodos = []; // Used to pass marked todos with private_metadata
 	let checkboxes = {
 		type: 'actions',
 		block_id: 'todos',
@@ -159,6 +150,7 @@ const markTodo = async (trigger_id) => {
 			todoOptions.push(todo);
 			if (t.done) {
 				initialOptions.push(todo);
+				finishedTodos.push(t.task);
 			}
 		}
 		if (initialOptions.length > 0) checkboxes.elements[0]['initial_options'] = initialOptions;
@@ -179,7 +171,8 @@ const markTodo = async (trigger_id) => {
 			type: 'plain_text',
 			text: 'Cancel'
 		},
-		blocks: [ checkboxes ]
+		blocks: [ checkboxes ],
+		private_metadata: finishedTodos.join(',') // Used to track finished todos.
 	};
 
 	const args = {
@@ -187,12 +180,9 @@ const markTodo = async (trigger_id) => {
 		view: JSON.stringify(view)
 	};
 
-	const result = await axios.post(`${apiUrl}/views.open`, args, config);
-
 	try {
-		if (result.data.error) {
-			console.log(result.data.error);
-		}
+		const result = await axios.post(`${API_URL}/views.open`, args, SLACK_HEADERS);
+		if (result.data.error) console.log(result.data.error);
 	} catch (err) {
 		return next(err);
 	}
@@ -218,7 +208,7 @@ const deleteTodo = async (trigger_id, date = moment().format('YYYY-MM-DD'), view
 		section(' ')
 	];
 	try {
-		const result = await axios.get(`${dbUrl}/${date}`);
+		const result = await axios.get(`${DB_URL}/${date}`, DB_HEADERS);
 		todos.push(...result.data);
 	} catch (err) {
 		console.log(err.message);
@@ -284,12 +274,9 @@ const deleteTodo = async (trigger_id, date = moment().format('YYYY-MM-DD'), view
 
 	const apiMethod = view_id ? 'views.update' : 'views.open';
 
-	const result = await axios.post(`${apiUrl}/${apiMethod}`, args, config);
-
 	try {
-		if (result.data.error) {
-			console.log(result.data.error);
-		}
+		const result = await axios.post(`${API_URL}/${apiMethod}`, args, SLACK_HEADERS);
+		if (result.data.error) console.log(result.data.error);
 	} catch (err) {
 		return next(err);
 	}
