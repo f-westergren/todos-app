@@ -1,11 +1,14 @@
-const section = (text) => {
-	return {
+const section = (text, block_id) => {
+	const section = {
 		type: 'section',
 		text: {
 			type: 'mrkdwn',
 			text
 		}
 	};
+
+	if (block_id) section['block_id'] = block_id;
+	return section;
 };
 
 const button = (text, value, action_id, style) => {
