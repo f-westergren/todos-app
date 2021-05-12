@@ -1,6 +1,6 @@
 const axios = require('axios');
 const moment = require('moment');
-const { API_URL, DB_URL, DB_HEADERS, SLACK_HEADERS } = require('./config');
+const { API_URL, DB_URL, DB_HEADERS, SLACK_HEADERS, TZ } = require('./config');
 const { section, button } = require('./blocks');
 
 const buttons = {
@@ -15,10 +15,10 @@ const buttons = {
 
 const updateTodoBlocks = async () => {
 	let todaysTodos = [];
-	let blocks = [ section(`*Today's Todo List* - ${moment().format('dddd, MMMM Do YYYY')}`) ];
+	let blocks = [ section(`*Today's Todo List* - ${moment.tz(TZ).format('dddd, MMMM Do YYYY')}`) ];
 
 	try {
-		const result = await axios.get(`${DB_URL}/${moment().format('YYYY-MM-DD')}`, DB_HEADERS);
+		const result = await axios.get(`${DB_URL}/${moment.tz(TZ).format('YYYY-MM-DD')}`, DB_HEADERS);
 		todaysTodos.push(...result.data);
 	} catch (err) {
 		console.log(err.message);
@@ -59,7 +59,7 @@ const displayHome = async (user, data) => {
 		const result = await axios.post(`${API_URL}/views.publish`, args, SLACK_HEADERS);
 		if (result.data.error) console.log(result.data.error);
 	} catch (err) {
-		console.log(error);
+		console.log(err);
 	}
 };
 

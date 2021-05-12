@@ -20,6 +20,8 @@ const DB_HEADERS = {
 	}
 };
 
+const TZ = 'America/Toronto'
+
 module.exports = {
 	SLACK_BOT_TOKEN,
 	SLACK_APP_ID,
@@ -30,5 +32,6 @@ module.exports = {
 	SLACK_HEADERS,
 	DB_HEADERS,
 	DB_URL,
-	API_URL
+	API_URL,
+  TZ
 };

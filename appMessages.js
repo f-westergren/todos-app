@@ -1,7 +1,7 @@
 const axios = require('axios');
 const moment = require('moment');
 
-const { API_URL, DB_URL, DB_HEADERS, SLACK_HEADERS, SLACK_TEAM_ID, SLACK_APP_ID, SLACK_CHANNEL } = require('./config');
+const { API_URL, DB_URL, DB_HEADERS, SLACK_HEADERS, SLACK_TEAM_ID, SLACK_APP_ID, SLACK_CHANNEL, TZ } = require('./config');
 const { section, button } = require('./blocks');
 
 const addTodoBtn = {
@@ -14,7 +14,7 @@ const sendTodos = async (channel) => {
 	let todaysTodos = [];
 
 	try {
-		const result = await axios.get(`${DB_URL}/${moment().format('YYYY-MM-DD')}`, DB_HEADERS);
+		const result = await axios.get(`${DB_URL}/${moment.tz(TZ).format('YYYY-MM-DD')}`, DB_HEADERS);
 		todaysTodos.push(...result.data);
 	} catch (err) {
 		console.log(err.message);
@@ -51,14 +51,14 @@ const sendTodos = async (channel) => {
 		const result = await axios.post(`${API_URL}/chat.postMessage`, args, SLACK_HEADERS);
 		if (result.data.error) console.log(result.data.error);
 	} catch (err) {
-		return next(err);
+		console.log(err.message)
 	}
 };
 
 const sendReminders = async () => {
 	let todaysTodos = [];
 	try {
-		const result = await axios.get(`${DB_URL}/${moment().format('YYYY-MM-DD')}`, DB_HEADERS);
+		const result = await axios.get(`${DB_URL}/${moment.tz(TZ).format('YYYY-MM-DD')}`, DB_HEADERS);
 		todaysTodos.push(...result.data);
 	} catch (err) {
 		console.log(err.message);
