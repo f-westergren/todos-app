@@ -48,6 +48,7 @@ const endOfDayUpdate = cron.schedule('30 23 * * *', () => {
 endOfDayUpdate.start();
 
 router.post('/events', async (req, res) => {
+  console.log(req.body.type)
 	switch (req.body.type) {
 		case 'url_verification': {
 			// verify Events API endpoint by returning challenge if present
@@ -97,6 +98,7 @@ router.post('/actions', async (req, res, next) => {
 	} else if (actions && actions[0].action_id.match(/mark-done-channel/)) {
 		// Marks todo as done when user clicks 'Mark as done' in channel message.
 		appActions.updateTodo(actions[0].value, { done: true });
+    
 
 		// Grabs the todo text and strips the initial :white_square: emoji.
 		const todo = message.blocks[1].text.text.slice(15);
@@ -159,7 +161,7 @@ router.post('/actions', async (req, res, next) => {
 
 		const { todo01, todo02, todo03, todo04 } = view.state.values;
 		const selectedUsers = todo04.user.selected_users;
-		const rotate = selectedUsers.length > 1 ? selectedUsers.join(',') : null;
+		const rotate = selectedUsers.length > 0 ? selectedUsers.join(',') : null;
 
 		// If no user is selected for task, use user who created todo.
 

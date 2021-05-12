@@ -91,7 +91,7 @@ const sendReminders = async () => {
 			const result = await axios.post(`${API_URL}/chat.postMessage`, args, SLACK_HEADERS);
 			if (result.data.error) console.log(result.data.error);
 		} catch (err) {
-			return next(err);
+			console.log(err.message);
 		}
 	}
 };
@@ -167,7 +167,7 @@ const endOfDay = async () => {
 		const result = await axios.post(`${API_URL}/chat.postMessage`, args, SLACK_HEADERS);
 		if (result.data.error) console.log(result.data.error);
 	} catch (err) {
-		return next(err);
+		console.log(err.message);
 	}
 };
 
