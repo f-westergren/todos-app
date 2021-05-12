@@ -1,13 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const fs = require('fs');
-const dbFile = './data/sqlite.db';
+
+// init sqlite db
+const dbFile = "./.data/sqlite.db";
 const exists = fs.existsSync(dbFile);
-const sqlite3 = require('sqlite3').verbose();
+const sqlite3 = require("sqlite3").verbose();
 const db = new sqlite3.Database(dbFile);
 
+const { TZ } = require("../config")
+
 const moment = require('moment');
-const today = moment().format('YYYY-MM-DD');
+const cron = require('node-cron');
+const today = moment.tz(TZ).format('YYYY-MM-DD')
 
 const partialUpdate = require('../partialUpdate');
 const { checkToken } = require('../middleware/auth');
@@ -120,6 +125,11 @@ router.post('/view', checkToken, (req, res) => {
 		});
 	}
 	res.send('Updated todos');
+});
+
+router.get('/wake/wakeup', (req, res) => {
+  console.log('here!')
+  res.send('Hello world')
 });
 
 module.exports = router;

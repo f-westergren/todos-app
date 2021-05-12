@@ -1,7 +1,7 @@
 const axios = require('axios');
 const moment = require('moment');
 
-const { API_URL, DB_URL, SLACK_HEADERS, DB_HEADERS } = require('./config');
+const { API_URL, DB_URL, SLACK_HEADERS, DB_HEADERS, TZ } = require('./config');
 
 const { option, section } = require('./blocks');
 
@@ -40,7 +40,7 @@ const addTodo = async (trigger_id, channel) => {
 				block_id: 'todo02',
 				element: {
 					type: 'datepicker',
-					initial_date: moment().format('YYYY-MM-DD'),
+					initial_date: moment.tz(TZ).format('YYYY-MM-DD'),
 					placeholder: {
 						type: 'plain_text',
 						text: 'Select a date'
@@ -109,14 +109,14 @@ const addTodo = async (trigger_id, channel) => {
 		const result = await axios.post(`${API_URL}/views.open`, args, SLACK_HEADERS);
 		if (result.data.error) console.log(result.data.error);
 	} catch (err) {
-		return next(err);
+		console.log(err.message)
 	}
 };
 
 const markTodo = async (trigger_id) => {
 	let todaysTodos = [];
 	try {
-		const result = await axios.get(`${DB_URL}/${moment().format('YYYY-MM-DD')}`, DB_HEADERS);
+		const result = await axios.get(`${DB_URL}/${moment.tz(TZ).format('YYYY-MM-DD')}`, DB_HEADERS);
 		todaysTodos.push(...result.data);
 	} catch (err) {
 		console.log(err.message);
@@ -161,7 +161,7 @@ const markTodo = async (trigger_id) => {
 		callback_id: 'mark-done-modal',
 		title: {
 			type: 'plain_text',
-			text: moment().format('dddd, MMMM Do')
+			text: moment.tz(TZ).format('dddd, MMMM Do')
 		},
 		submit: {
 			type: 'plain_text',
@@ -184,11 +184,11 @@ const markTodo = async (trigger_id) => {
 		const result = await axios.post(`${API_URL}/views.open`, args, SLACK_HEADERS);
 		if (result.data.error) console.log(result.data.error);
 	} catch (err) {
-		return next(err);
+		console.log(err.message)
 	}
 };
 
-const deleteTodo = async (trigger_id, date = moment().format('YYYY-MM-DD'), view_id) => {
+const deleteTodo = async (trigger_id, date = moment.tz(TZ).format('YYYY-MM-DD'), view_id) => {
 	let todos = [];
 	let blocks = [
 		{
@@ -278,7 +278,7 @@ const deleteTodo = async (trigger_id, date = moment().format('YYYY-MM-DD'), view
 		const result = await axios.post(`${API_URL}/${apiMethod}`, args, SLACK_HEADERS);
 		if (result.data.error) console.log(result.data.error);
 	} catch (err) {
-		return next(err);
+		console.log(err.message)
 	}
 };
 

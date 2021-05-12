@@ -4,7 +4,7 @@ const axios = require('axios');
 const moment = require('moment');
 const cron = require('node-cron');
 
-const { API_URL, DB_URL, SLACK_CHANNEL, DB_HEADERS, SLACK_HEADERS } = require('../config');
+const { API_URL, DB_URL, SLACK_CHANNEL, DB_HEADERS, SLACK_HEADERS, TZ } = require('../config');
 
 const appHome = require('../appHome');
 const appMessages = require('../appMessages');
@@ -24,18 +24,27 @@ router.use(express.json({ verify: rawBodyBuffer }));
 // Send daily todo list every day at 9 AM
 const sendDailyTodoList = cron.schedule('0 9 * * *', () => {
 	appMessages.sendTodos(SLACK_CHANNEL);
-});
+},{
+    scheduled: true,
+    timezone: TZ
+  });
 sendDailyTodoList.start();
 
 // Until todos are finished, send reminders every other hour from 15:15.
 const sendReminders = cron.schedule('15 15,19,21,23 * * *', () => {
 	appMessages.sendReminders();
-});
+},{
+    scheduled: true,
+    timezone: TZ
+  });
 sendReminders.start();
 // Update todo list at end of day, and send message if there are still todos left.
 const endOfDayUpdate = cron.schedule('30 23 * * *', () => {
 	appMessages.endOfDay();
-});
+},{
+    scheduled: true,
+    timezone: TZ
+  });
 endOfDayUpdate.start();
 
 router.post('/events', async (req, res) => {
@@ -164,7 +173,7 @@ router.post('/actions', async (req, res, next) => {
 
 		appHome.displayHome(user.id, data);
 	} else if (type === 'view_submission' && view.callback_id.match(/mark-done/)) {
-		const result = await axios.get(`${DB_URL}/${moment().format('YYYY-MM-DD')}`, DB_HEADERS);
+		const result = await axios.get(`${DB_URL}/${moment.tz(TZ).format('YYYY-MM-DD')}`, DB_HEADERS);
 
 		const alreadyFinished = view.private_metadata;
 		const selectedOptions = view.state.values.todos.check.selected_options;
@@ -215,5 +224,3 @@ router.post('/actions', async (req, res, next) => {
 });
 
 module.exports = router;
-
-//TODO: Delete and edit todos. Slash commands for list todos, add todo
