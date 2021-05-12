@@ -8,9 +8,9 @@ const updateTodo = async (id, row) => {
 	};
 
 	try {
-		await axios.patch(`afdsdfsadfs/${id}`, data, DB_HEADERS);
+		await axios.patch(`${DB_URL}/${id}`, data, DB_HEADERS);
 	} catch (err) {
-		return next(err);
+		console.log(err.message);
 	}
 };
 
