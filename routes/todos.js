@@ -127,9 +127,4 @@ router.post('/view', checkToken, (req, res) => {
 	res.send('Updated todos');
 });
 
-router.get('/wake/wakeup', (req, res) => {
-  console.log('here!')
-  res.send('Hello world')
-});
-
 module.exports = router;
