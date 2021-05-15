@@ -31,8 +31,7 @@ const sendTodos = async (channel) => {
 		blocks.push(
 			section(todos.join('\n')),
 			section(
-				`If you want to mark a todo as :white_check_mark:, head over to my 
-				<slack://app?team=${SLACK_TEAM_ID}&id=${SLACK_APP_ID}&tab=home|home tab>.`
+				`If you want to mark a todo as :white_check_mark:, head over to my <slack://app?team=${SLACK_TEAM_ID}&id=${SLACK_APP_ID}&tab=home|home tab>.`
 			)
 		);
 	} else {
@@ -100,7 +99,7 @@ const endOfDay = async () => {
 	let todaysTodos = [];
 
 	const addTime = (num, time) => {
-		let today = moment();
+		let today = moment().tz(TZ);
 		today = moment(today, 'YYYY-MM-DD').add(num, time);
 
 		return (today = today.format('YYYY-MM-DD'));
@@ -113,7 +112,7 @@ const endOfDay = async () => {
 	};
 
 	try {
-		const result = await axios.get(`${DB_URL}/${moment().format('YYYY-MM-DD')}`, DB_HEADERS);
+		const result = await axios.get(`${DB_URL}/${moment.tz(TZ).format('YYYY-MM-DD')}`, DB_HEADERS);
 		todaysTodos.push(...result.data);
 	} catch (err) {
 		console.log(err.message);
@@ -129,13 +128,19 @@ const endOfDay = async () => {
 
 		if (t.rotate) t.rotate = rotateUser(t.rotate);
 
-		// Add recurring todos to database
-		if (t.done && t.recurring !== 'no') {
-			t.done = false;
-			await axios.post(DB_URL, t, DB_HEADERS);
+		// Add recurring todos to DB with next date, change 'done' to false before adding to DB.
+		if (t.recurring !== 'no') {
+      if (t.done = true) {
+        t.done = false
+        await axios.post(DB_URL, t, DB_HEADERS);
+        t.done = true
+      } else {
+        await axios.post(DB_URL, t, DB_HEADERS);
+      }
+			
 		}
 
-		// If todo wasn't completed, and isn't recurring, add it to database.
+		// If todo wasn't completed, and isn't recurring, add it to next day in DB.
 		if (!t.done && t.recurring === 'no') {
 			t.date = t.date = addTime(1, 'days');
 			await axios.post(DB_URL, t, DB_HEADERS);
@@ -152,7 +157,7 @@ const endOfDay = async () => {
 		];
 		let todos = [];
 		for (const t of todaysTodos) {
-			todos.push(`:x: ${t.task}`);
+      if (!t.done) todos.push(`:x: ${t.task}`);
 		}
 		blocks.push(section(todos.join('\n')));
 	}

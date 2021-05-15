@@ -2,12 +2,10 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const moment = require('moment');
-const cron = require('node-cron');
 
 const { API_URL, DB_URL, SLACK_CHANNEL, DB_HEADERS, SLACK_HEADERS, TZ } = require('../config');
 
 const appHome = require('../appHome');
-const appMessages = require('../appMessages');
 const appModals = require('../appModals');
 const appActions = require('../appActions');
 const signature = require('../verifySignature');
@@ -20,32 +18,6 @@ const rawBodyBuffer = (req, res, buf, encoding) => {
 
 router.use(express.urlencoded({ verify: rawBodyBuffer, extended: true }));
 router.use(express.json({ verify: rawBodyBuffer }));
-
-// Send daily todo list every day at 9 AM
-const sendDailyTodoList = cron.schedule('0 9 * * *', () => {
-	appMessages.sendTodos(SLACK_CHANNEL);
-},{
-    scheduled: true,
-    timezone: TZ
-  });
-sendDailyTodoList.start();
-
-// Until todos are finished, send reminders every other hour from 15:15.
-const sendReminders = cron.schedule('15 15,19,21,23 * * *', () => {
-	appMessages.sendReminders();
-},{
-    scheduled: true,
-    timezone: TZ
-  });
-sendReminders.start();
-// Update todo list at end of day, and send message if there are still todos left.
-const endOfDayUpdate = cron.schedule('30 23 * * *', () => {
-	appMessages.endOfDay();
-},{
-    scheduled: true,
-    timezone: TZ
-  });
-endOfDayUpdate.start();
 
 router.post('/events', async (req, res) => {
   console.log(req.body.type)
