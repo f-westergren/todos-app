@@ -20,7 +20,6 @@ router.use(express.urlencoded({ verify: rawBodyBuffer, extended: true }));
 router.use(express.json({ verify: rawBodyBuffer }));
 
 router.post('/events', async (req, res) => {
-  console.log(req.body.type)
 	switch (req.body.type) {
 		case 'url_verification': {
 			// verify Events API endpoint by returning challenge if present
