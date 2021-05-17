@@ -160,7 +160,9 @@ const endOfDay = async () => {
       if (!t.done) todos.push(`:x: ${t.task}`);
 		}
 		blocks.push(section(todos.join('\n')));
-	}
+	} else {
+    blocks = [section("Well done! You finished all tasks today :smile:")]
+  }
 
 	const args = {
 		channel: SLACK_CHANNEL,
