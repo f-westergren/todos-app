@@ -58,7 +58,7 @@ router.get('/:date', checkToken, (req, res) => {
 router.post('/', checkToken, (req, res) => {
 	const { date, task, user, recurring, done, rotate, reminder } = req.body;
 	let sql = `INSERT INTO todos(date, task, user, recurring, done, rotate, reminder) VALUES(?, ?, ?, ?, ?, ?, ?)`;
-	db.run(sql, [ date, task, user, recurring, done, rotate ], function(err) {
+	db.run(sql, [ date, task, user, recurring, done, rotate, reminder ], function(err) {
 		if (err) {
 			res.send(err.message);
 		}

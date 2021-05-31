@@ -62,7 +62,6 @@ const sendReminders = async () => {
 	} catch (err) {
 		console.log(err.message);
 	}
-
 	// Filter out todos that are marked as done or where reminders are turned off.
 	todaysTodos = todaysTodos.filter((t) => !t.done && t.reminder);
 
@@ -130,6 +129,7 @@ const endOfDay = async () => {
 
 		// Add recurring todos to DB with next date, change 'done' to false before adding to DB.
 		if (t.recurring !== 'no') {
+      t.reminder = true;
       if (t.done = true) {
         t.done = false
         await axios.post(DB_URL, t, DB_HEADERS);
