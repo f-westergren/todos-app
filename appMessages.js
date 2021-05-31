@@ -118,7 +118,6 @@ const endOfDay = async () => {
 	}
 
 	for (const t of todaysTodos) {
-    console.log(t)
 		if (t.recurring === 'every-day') t.date = addTime(1, 'days');
 		else if (t.recurring === 'every-other-day') t.date = addTime(2, 'days');
 		else if (t.recurring === 'every-week') t.date = addTime(1, 'weeks');
