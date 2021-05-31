@@ -30,6 +30,7 @@ app.use((err, req, res, next) => {
 
 // Send daily todo list every day at 9 AM
 const sendDailyTodoList = cron.schedule('0 9 * * *', () => {
+  console.log("Sending today's list")
 	appMessages.sendTodos(SLACK_CHANNEL);
 },{
     scheduled: true,

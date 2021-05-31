@@ -141,14 +141,14 @@ router.post('/actions', async (req, res, next) => {
 			date: todo02.date.selected_date,
 			recurring: todo03.recurring.selected_option.value,
 			user: user.id,
-			rotate: rotate
+			rotate: rotate,
+      reminder: true
 		};
 
 		appHome.displayHome(user.id, data);
 	} else if (type === 'view_submission' && view.callback_id.match(/mark-done/)) {
 		const result = await axios.get(`${DB_URL}/${moment.tz(TZ).format('YYYY-MM-DD')}`, DB_HEADERS);
-
-		const alreadyFinished = view.private_metadata;
+		const alreadyFinished = view.private_metadata ? view.private_metadata.split(',') : []
 		const selectedOptions = view.state.values.todos.check.selected_options;
 
 		try {
@@ -168,11 +168,15 @@ router.post('/actions', async (req, res, next) => {
 
 		// This creates the message to send when a todo is marked as done. Only todos that weren't
 		// already marked as finished will be posted.
-		if (selectedOptions.length > alreadyFinished.split(',').length) {
+		if (selectedOptions.length > alreadyFinished.length) {
 			let todos = [];
 
-			selectedOptions.forEach((o) => {
-				if (!alreadyFinished.match(o.text.text)) todos.push(`"${o.text.text}"`);
+			selectedOptions.forEach(o => {
+        let match = false;
+        alreadyFinished.forEach(a => {
+          if (a === o.text.text) match = true
+        })
+        if (!match) todos.push(`"${o.text.text}"`)
 			});
 
 			todos = todos.join(', ');
