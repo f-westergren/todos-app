@@ -36,3 +36,4 @@ Node.js, Express, SQLite,
 - Update database and give recurring tasks their own table.
 - Create functionality to edit todos.
 - Add Slack slash commands to add todos, and list todos.
+- Make app publicly available and publish in Slack's app directory.
